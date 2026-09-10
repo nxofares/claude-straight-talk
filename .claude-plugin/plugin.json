@@ -1,0 +1,14 @@
+{
+  "name": "straight-talk",
+  "description": "Communication discipline for Claude Code: answer first, back claims with evidence, surface assumptions, report decisions not steps",
+  "version": "0.1.0",
+  "license": "MIT",
+  "keywords": [
+    "communication",
+    "concision",
+    "honesty",
+    "verification",
+    "output-style",
+    "skills"
+  ]
+}

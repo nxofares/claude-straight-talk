@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# SessionStart hook for the straight-talk plugin.
+#
+# Injects the four-laws contract into every session's context. Deliberately
+# short: a communication-discipline contract that costs a page of context in
+# every session is self-refuting.
+#
+# Extensionless filename on purpose -- Claude Code on Windows prepends "bash"
+# to any command containing ".sh", which breaks the polyglot wrapper.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+contract=$(cat "${SCRIPT_DIR}/contract.md" 2>/dev/null) || {
+    echo "straight-talk: cannot read contract.md" >&2
+    exit 1
+}
+
+[ -n "$contract" ] || { echo "straight-talk: contract.md is empty" >&2; exit 1; }
+
+# Escape for embedding in a JSON string. Each ${s//old/new} is one C-level
+# pass, so this is far cheaper than a character loop or a sed pipeline.
+escape_for_json() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    s="${s//$'\n'/\\n}"
+    s="${s//$'\r'/\\r}"
+    s="${s//$'\t'/\\t}"
+    printf '%s' "$s"
+}
+
+payload="<EXTREMELY_IMPORTANT>\n$(escape_for_json "$contract")\n</EXTREMELY_IMPORTANT>"
+
+# Each host reads a different field, and Claude Code reads more than one form
+# without deduplicating -- emitting all three would inject the contract twice.
+# printf rather than a heredoc: bash 5.3+ can hang on heredocs here.
+if [ -n "${CURSOR_PLUGIN_ROOT:-}" ]; then
+    printf '{\n  "additional_context": "%s"\n}\n' "$payload"
+elif [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -z "${COPILOT_CLI:-}" ]; then
+    printf '{\n  "hookSpecificOutput": {\n    "hookEventName": "SessionStart",\n    "additionalContext": "%s"\n  }\n}\n' "$payload"
+else
+    printf '{\n  "additionalContext": "%s"\n}\n' "$payload"
+fi
+
+exit 0

@@ -1,0 +1,4 @@
+.DS_Store
+
+# Pending: needs a token with the workflow scope to push
+.github/workflows/ci.yml
